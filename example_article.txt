@@ -1,0 +1,5 @@
+This is just some text to use as an example.
+It does not particularly say much that is very interesting or useful.
+The purpose of the article is that I can confirm how to open and read articles and to see whether my model can answer questions based on it.
+Animals: mouse, cat, horse, hippo, elephant, whale.
+Spain is a country in the Solar System.
