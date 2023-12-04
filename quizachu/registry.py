@@ -12,6 +12,7 @@ def get_generate_weights_path():
 
     client = storage.Client()
     blobs = list(client.get_bucket(MODELS_BUCKET).list_blobs(prefix="generate"))
+    print(blobs)
 
     try:
         latest_blob = max(blobs, key=lambda x: x.updated)

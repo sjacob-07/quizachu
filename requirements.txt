@@ -1,5 +1,6 @@
+fastapi
 google-cloud-storage
-tensorflow==2.15.0
+pandas
+pydantic
 transformers
-
-
+uvicorn
