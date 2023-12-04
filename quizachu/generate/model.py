@@ -1,4 +1,4 @@
-weights = "###"
+from quizachu.registry import *
 
 test_context = """
 The history of the Netherlands extends back long before the founding of the modern Kingdom of the Netherlands in 1815 after the defeat of Napoleon. For thousands of years, people have been living together around the river deltas of this section of the North Sea coast. Records begin with the four centuries during which the region formed a militarized border zone of the Roman Empire. As the Western Roman Empire collapsed and the Middle Ages began, three dominant Germanic peoples coalesced in the area – Frisians in the north and coastal areas, Low Saxons in the northeast, in addition to the Franks in the south. By 800, the Frankish Carolingian dynasty had once again integrated the area into an empire covering a large part of Western Europe. The region was part of the duchy of Lower Lotharingia within the Holy Roman Empire, but neither the empire nor the duchy were governed in a centralized manner. For several centuries, medieval lordships such as Brabant, Holland, Zeeland, Friesland, Guelders and others held a changing patchwork of territories.
@@ -10,13 +10,19 @@ def initialize_generate_model():
     model = TFT5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
     return model
 
-def initialize_generate_tokenizer():
+def create_generate_tokenizer():
     from transformers import AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
     return tokenizer
 
-def load_weights_from_bucket(model):
-    model.load_weights(weights)
+def update_weights(model, weights_path):
+    model.load_weights(weights_path)
+    return model
+
+def create_generate_model():
+    model = initialize_generate_model()
+    weights_path = get_generate_weights_path()
+    model = update_weights(model, weights_path)
     return model
 
 def generate_questions(model, tokenizer, context, n_questions=20):
@@ -32,9 +38,8 @@ def generate_questions(model, tokenizer, context, n_questions=20):
     return questions
 
 if __name__ == "__main__":
-    model = initialize_generate_model()
-    tokenizer = initialize_generate_tokenizer()
-    model = load_weights_from_bucket(model)
+    model = create_generate_model()
+    tokenizer = create_generate_tokenizer()
 
     questions = generate_questions(model, tokenizer, test_context, 10)
     print(questions)
