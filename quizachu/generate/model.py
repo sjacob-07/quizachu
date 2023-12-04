@@ -31,7 +31,10 @@ def generate_questions(model, tokenizer, context, n_questions=20):
         tokens,
         do_sample=True,
         num_return_sequences=n_questions,
-        top_p=0.98)
+        top_p=GENERATE_TOP_P,
+        top_k=GENERATE_TOP_K,
+        temperature=TEMPERATURE
+    )
     questions = []
     for i in range(n_questions):
         questions.append(tokenizer.decode(generated_tokens[i], skip_special_tokens=True))
