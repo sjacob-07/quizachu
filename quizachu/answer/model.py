@@ -31,11 +31,9 @@ def answer_questions_with_confidence(question_answerer, context = "You did not s
 
     return questions_answers
 
-def select_top_n_questions(question_answerer, context, questions, c = 0.3, n = 20):
+def select_top_n_questions(question_answerer, context, questions, c = 0.3, n = 20, max_repeat_exact_answers=2):
     """Selects the top n questions with the highest confidence level c
     User can define how many questions are required and the minimum confidence level"""
-
-    repeated_answers = {}
 
     # Call answer_questions to get a df of questions and answers
     questions_answers = answer_questions_with_confidence(question_answerer, context, questions)
@@ -43,9 +41,21 @@ def select_top_n_questions(question_answerer, context, questions, c = 0.3, n = 2
     # Filter for confidence
     conf_questions = questions_answers[questions_answers['confidence'] > c]
 
-    # Return n questions ordered by confidence
-    selected_questions = conf_questions.sort_values(by='confidence', ascending=False).head(n)\
-    .reset_index().rename(columns={'index':'original_question_number'})
+    # Create a dictionary with a key for each unique answer
+    # which will be updated with frequency of occurrence
+    answers_count = {k: 0 for k in conf_questions["answer"].unique()}
+
+    # Sort questions by confidence
+    selected_questions = conf_questions.sort_values(by='confidence', ascending=False)
+
+    # Remove questions/answers for which the answer occurs more then `max_repeat_exact_answers` times
+    for index, row in selected_questions.iterrows():
+        answer = row["answer"]
+        answers_count[answer] = answers_count[answer] + 1
+        if answers_count[answer] > max_repeat_exact_answers:
+            selected_questions.drop(index, inplace=True)
+
+    selected_questions = selected_questions.head(n).reset_index().rename(columns={'index':'original_question_number'})
 
     """Check whether enough questions can be returned and explain why if not"""
 

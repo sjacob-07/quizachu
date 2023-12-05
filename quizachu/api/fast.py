@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from quizachu.generate.model import create_generate_model, create_generate_tokenizer, generate_questions
 from quizachu.answer.model import create_question_answerer, answer_questions_with_confidence, select_top_n_questions
+import time
 
 class QuestionGenerateRequest(BaseModel):
     context: str
@@ -76,14 +77,21 @@ async def generate_answers_api(request: AnswerGenerateRequest):
 @app.post("/generate-questions-and-answers")
 async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
 
+    start = time.time()
     tokenizer = app.state.generate_tokenizer
     model = app.state.generate_model
 
-    questions = generate_questions(model, tokenizer, request.context, 50)
+    questions = generate_questions(model, tokenizer, request.context, 40)
+    check1 = time.time()
+    print(f"Question generation time: {check1 - start}")
 
-    response = select_top_n_questions(app.state.question_answerer, request.context, questions)
+
+    response = select_top_n_questions(app.state.question_answerer, request.context, questions, c=0.05, n=20)
     response.drop(columns=["original_question_number"], inplace=True)
     response.columns = ["confidence_score", "questions", "answers"]
+    check2 = time.time()
+    print(f"Answer generation time: {check2 - check1}")
+    print(f"Total execution time: {check2 - start}")
 
     return response.to_dict()
 
