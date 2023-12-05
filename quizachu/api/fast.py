@@ -15,13 +15,14 @@ class AnswerGenerateRequest(BaseModel):
     questions: list
 
 class AnswerScoreRequest(BaseModel):
-    question_ids: list
-    user_answers: list
+    sentence1: str
+    sentence2: str
 
 app = FastAPI()
-app.state.generate_model = create_generate_model()
-app.state.generate_tokenizer = create_generate_tokenizer()
-app.state.question_answerer = create_question_answerer()
+app.state.generate_model = None
+app.state.generate_tokenizer = None
+app.state.question_answerer = None
+app.state.score_model = None
 
 @app.get("/ping")
 def ping():
@@ -48,6 +49,12 @@ async def generate_questions_api(request: QuestionGenerateRequest):
     `questions` (list): A list of `str` questions generated from the context of length `num_questions`.
     """
 
+    if not app.state.generate_model:
+        app.state.generate_model = create_generate_model()
+
+    if not app.state.generate_tokenizer:
+        app.state.generate_tokenizer = create_generate_tokenizer()
+
     tokenizer = app.state.generate_tokenizer
     model = app.state.generate_model
 
@@ -73,6 +80,9 @@ async def generate_answers_api(request: AnswerGenerateRequest):
     `golden_answers` (list): The most likely correct answer to the given question.
     """
 
+    if not app.state.question_answerer:
+        app.state.question_answerer = create_question_answerer()
+
     response = select_top_n_questions(app.state.question_answerer, request.context, request.questions)
 
     return response.to_dict()
@@ -81,6 +91,16 @@ async def generate_answers_api(request: AnswerGenerateRequest):
 async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
 
     start = time.time()
+
+    if not app.state.generate_model:
+        app.state.generate_model = create_generate_model()
+
+    if not app.state.generate_tokenizer:
+        app.state.generate_tokenizer = create_generate_tokenizer()
+
+    if not app.state.question_answerer:
+        app.state.question_answerer = create_question_answerer()
+
     tokenizer = app.state.generate_tokenizer
     model = app.state.generate_model
 
@@ -137,8 +157,9 @@ async def generate_scores_api(request: AnswerScoreRequest):
     ____________
     `results` (dict): The predication and probability of the given answer
     """
-    model = app.state.create_generate_score_model
+    if not app.state.score_model:
+        score_model = create_generate_score_model()
 
-    results = check_answer_similarity(model, request.sentence1, request.sentence2)
+    results = check_answer_similarity(score_model, request.sentence1, request.sentence2)
 
     return results

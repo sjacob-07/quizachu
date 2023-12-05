@@ -1,3 +1,6 @@
+import tensorflow as tf
+import numpy as np
+
 class BertSemanticDataTokenizer(tf.keras.utils.Sequence):
     """Generates batches of data.
 
@@ -18,7 +21,7 @@ class BertSemanticDataTokenizer(tf.keras.utils.Sequence):
         self,
         sentence_pairs,
         labels,
-        batch_size=batch_size,
+        batch_size=32,
         shuffle=True,
         include_targets=True,
     ):
@@ -50,7 +53,7 @@ class BertSemanticDataTokenizer(tf.keras.utils.Sequence):
         encoded = self.tokenizer.batch_encode_plus(
             sentence_pairs.tolist(),
             add_special_tokens=True,
-            max_length=max_length,
+            max_length=128,
             return_attention_mask=True,
             return_token_type_ids=True,
             pad_to_max_length=True,

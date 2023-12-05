@@ -7,7 +7,7 @@ RUN pip install -r /requirements.txt
 COPY quizachu /quizachu
 
 USER 0
-RUN mkdir -p /home/rob/.cache/models
+RUN mkdir -p /home/rob/.cache/models/score_model
 USER $CONTAINER_USER_ID
 
 CMD uvicorn quizachu.api.fast:app --host 0.0.0.0 --port $PORT
