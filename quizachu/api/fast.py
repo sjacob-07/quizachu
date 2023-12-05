@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from quizachu.generate.model import create_generate_model, create_generate_tokenizer, generate_questions
 from quizachu.answer.model import create_question_answerer, answer_questions_with_confidence, select_top_n_questions
 import time
+import more_itertools as mit
 
 class QuestionGenerateRequest(BaseModel):
     context: str
@@ -48,7 +49,7 @@ async def generate_questions_api(request: QuestionGenerateRequest):
     tokenizer = app.state.generate_tokenizer
     model = app.state.generate_model
 
-    questions = generate_questions(model, tokenizer, request.context, 100)
+    questions = generate_questions(model, tokenizer, request.context, 10)
 
     return questions
 
@@ -81,12 +82,33 @@ async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
     tokenizer = app.state.generate_tokenizer
     model = app.state.generate_model
 
-    questions = generate_questions(model, tokenizer, request.context, 40)
+    context_length = len(request.context.split())
+
+    questions_lists = []
+
+    if context_length > 450:
+        n_chunks = 8
+        width_factor = max(n_chunks - 2, 2)
+
+        chunks = [' '.join(window) for window in mit.windowed(request.context.split(), n=context_length//width_factor, step=context_length//n_chunks, fillvalue="")]
+
+        for chunk in chunks:
+            print(chunk)
+            chunk_questions = generate_questions(model, tokenizer, chunk, 4)
+            questions_lists.append(chunk_questions)
+
+    else:
+        questions_lists.append(generate_questions(model, tokenizer, request.context, 40))
+
     check1 = time.time()
     print(f"Question generation time: {check1 - start}")
 
+    questions = []
+    for l in questions_lists:
+        for q in l:
+            questions.append(q)
 
-    response = select_top_n_questions(app.state.question_answerer, request.context, questions, c=0.05, n=20)
+    response = select_top_n_questions(app.state.question_answerer, request.context, questions, c=0.05, n=10)
     response.drop(columns=["original_question_number"], inplace=True)
     response.columns = ["confidence_score", "questions", "answers"]
     check2 = time.time()
