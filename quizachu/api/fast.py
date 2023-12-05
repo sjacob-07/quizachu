@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from quizachu.generate.model import create_generate_model, create_generate_tokenizer, generate_questions
 from quizachu.answer.model import create_question_answerer, answer_questions_with_confidence, select_top_n_questions
+from quizachu.score.model import create_generate_score_model, check_answer_similarity
+
 import time
 import more_itertools as mit
 
@@ -127,13 +129,16 @@ async def generate_scores_api(request: AnswerScoreRequest):
 
     JSON Fields:
     ------------
-    `question_ids` (list): The ids of served questions which should be evaluated.
+    `sentence1` (list): The golden answer for a question.
 
-    `user_answers` (list): The list of user answers to evaluate.
+    `sentence2` (list): The user answer that needs to be evaluted
 
     Returns:
     ____________
-    `scores` (list): The scores of the given answers
+    `results` (dict): The predication and probability of the given answer
     """
+    model = app.state.create_generate_score_model
 
-    return request
+    results = check_answer_similarity(model, request.sentence1, request.sentence2)
+
+    return results
