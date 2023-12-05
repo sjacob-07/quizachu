@@ -1,5 +1,6 @@
 fastapi
 google-cloud-storage
+more_itertools
 pandas
 pydantic
 transformers
