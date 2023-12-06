@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from quizachu.generate.model import create_generate_model, create_generate_tokenizer, generate_questions
-from quizachu.answer.model import create_question_answerer, answer_questions_with_confidence, select_top_n_questions
+from quizachu.answer.model import create_question_answerer, select_top_n_questions
 from quizachu.score.model import create_generate_score_model, check_answer_similarity
 from typing import Optional
 
@@ -92,8 +92,6 @@ async def generate_answers_api(request: AnswerGenerateRequest):
 @app.post("/generate-questions-and-answers")
 async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
 
-    print(request.allow_duplicates)
-
     start = time.time()
 
     if not app.state.generate_model:
@@ -115,7 +113,6 @@ async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
     # Scale the number of questions/answers generated according to the context length
     # Add another question per 150 words of context
     n_questions = 4 + context_length // 150
-    print(n_questions)
 
     if context_length > 450:
         n_chunks = n_questions

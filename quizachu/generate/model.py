@@ -31,14 +31,10 @@ def generate_questions(model, tokenizer, context, n_questions=20):
         tokens,
         do_sample=False,
         num_return_sequences=n_questions,
-        #top_p=GENERATE_TOP_P,
-        # top_k=GENERATE_TOP_K,
-        temperature=TEMPERATURE,
         num_beams=n_questions,
         num_beam_groups=n_questions,
         diversity_penalty=10.0,
         no_repeat_ngram_size=2,
-        #early_stopping=True
         repetition_penalty=2.0
     )
     questions = []

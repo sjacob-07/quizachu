@@ -25,8 +25,6 @@ def update_score_model_weights(model, weights_path):
 def create_generate_score_model():
     from transformers import TFBertModel
     model_path = get_scoring_model_path()
-    print(model_path)
-    print(type(model_path))
     model = tf.keras.saving.load_model(model_path)
     return model
 
@@ -42,18 +40,6 @@ def check_answer_similarity(model, sentence1, sentence2):
     proba = f"{proba[idx]: .2f}%"
     pred = labels[idx]
     return {"prediction": pred, "probability": proba}
-
-# def generate_questions(model, tokenizer, context, n_questions=20):
-#     tokens = tokenizer(context, return_tensors="tf").input_ids
-#     generated_tokens = model.generate(
-#         tokens,
-#         do_sample=True,
-#         num_return_sequences=n_questions,
-#         top_p=0.98)
-#     questions = []
-#     for i in range(n_questions):
-#         questions.append(tokenizer.decode(generated_tokens[i], skip_special_tokens=True))
-#     return questions
 
 if __name__ == "__main__":
     model = create_generate_score_model()
