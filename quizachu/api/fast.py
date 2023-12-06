@@ -17,8 +17,8 @@ class AnswerGenerateRequest(BaseModel):
     questions: list
 
 class AnswerScoreRequest(BaseModel):
-    sentence1: list = []
-    sentence2: list = []
+    sentence1: str
+    sentence2: str
 
 app = FastAPI()
 app.state.generate_model = None
