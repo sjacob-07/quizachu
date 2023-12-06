@@ -3,12 +3,14 @@ from pydantic import BaseModel
 from quizachu.generate.model import create_generate_model, create_generate_tokenizer, generate_questions
 from quizachu.answer.model import create_question_answerer, answer_questions_with_confidence, select_top_n_questions
 from quizachu.score.model import create_generate_score_model, check_answer_similarity
+from typing import Optional
 
 import time
 import more_itertools as mit
 
 class QuestionGenerateRequest(BaseModel):
     context: str
+    allow_duplicates: Optional[bool] = False
 
 class AnswerGenerateRequest(BaseModel):
     context: str
@@ -90,6 +92,8 @@ async def generate_answers_api(request: AnswerGenerateRequest):
 @app.post("/generate-questions-and-answers")
 async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
 
+    print(request.allow_duplicates)
+
     start = time.time()
 
     if not app.state.generate_model:
@@ -108,19 +112,24 @@ async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
 
     questions_lists = []
 
+    # Scale the number of questions/answers generated according to the context length
+    # Add another question per 150 words of context
+    n_questions = 4 + context_length // 150
+    print(n_questions)
+
     if context_length > 450:
-        n_chunks = 8
+        n_chunks = n_questions
+        # The width of each chunk should be n_chunks - 2 (to allow overlapping)
         width_factor = max(n_chunks - 2, 2)
 
         chunks = [' '.join(window) for window in mit.windowed(request.context.split(), n=context_length//width_factor, step=context_length//n_chunks, fillvalue="")]
 
         for chunk in chunks:
-            print(chunk)
             chunk_questions = generate_questions(model, tokenizer, chunk, 4)
             questions_lists.append(chunk_questions)
 
     else:
-        questions_lists.append(generate_questions(model, tokenizer, request.context, 40))
+        questions_lists.append(generate_questions(model, tokenizer, request.context, n_questions*4))
 
     check1 = time.time()
     print(f"Question generation time: {check1 - start}")
@@ -128,9 +137,21 @@ async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
     questions = []
     for l in questions_lists:
         for q in l:
-            questions.append(q)
+            # Do not append to the list if the question is an empty string
+            if q:
+                questions.append(q)
 
-    response = select_top_n_questions(app.state.question_answerer, request.context, questions, c=0.05, n=10)
+    max_repeat_exact_answers=1
+    if request.allow_duplicates:
+        max_repeat_exact_answers=2
+
+    response = select_top_n_questions(app.state.question_answerer,
+                                    request.context,
+                                    questions,
+                                    c=0.05,
+                                    n=n_questions,
+                                    max_repeat_exact_answers=max_repeat_exact_answers)
+
     response.drop(columns=["original_question_number"], inplace=True)
     response.columns = ["confidence_score", "questions", "answers"]
     check2 = time.time()
