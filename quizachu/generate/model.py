@@ -7,11 +7,13 @@ By 1433, the Duke of Burgundy had assumed control over most of Lower Lotharingia
 
 def initialize_generate_model():
     from transformers import TFT5ForConditionalGeneration
+    # Load a blank flan-t5 model
     model = TFT5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
     return model
 
 def create_generate_tokenizer():
     from transformers import AutoTokenizer
+    # Load a blank flan-t5 tokenizer
     tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
     return tokenizer
 
@@ -22,6 +24,7 @@ def update_weights(model, weights_path):
 def create_generate_model():
     model = initialize_generate_model()
     weights_path = get_generate_weights_path()
+    # Add fine-tuned weights from GCS or local cache
     model = update_weights(model, weights_path)
     return model
 
@@ -31,14 +34,10 @@ def generate_questions(model, tokenizer, context, n_questions=20):
         tokens,
         do_sample=False,
         num_return_sequences=n_questions,
-        #top_p=GENERATE_TOP_P,
-        # top_k=GENERATE_TOP_K,
-        temperature=TEMPERATURE,
         num_beams=n_questions,
         num_beam_groups=n_questions,
         diversity_penalty=10.0,
         no_repeat_ngram_size=2,
-        #early_stopping=True
         repetition_penalty=2.0
     )
     questions = []
