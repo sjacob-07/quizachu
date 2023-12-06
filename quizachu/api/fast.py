@@ -9,14 +9,15 @@ import more_itertools as mit
 
 class QuestionGenerateRequest(BaseModel):
     context: str
+    allow_duplicates: bool | None = True
 
 class AnswerGenerateRequest(BaseModel):
     context: str
     questions: list
 
 class AnswerScoreRequest(BaseModel):
-    sentence1: str
-    sentence2: str
+    sentence1: list = []
+    sentence2: list = []
 
 app = FastAPI()
 app.state.generate_model = None
@@ -89,6 +90,8 @@ async def generate_answers_api(request: AnswerGenerateRequest):
 
 @app.post("/generate-questions-and-answers")
 async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
+
+    print(request.allow_duplicates)
 
     start = time.time()
 
