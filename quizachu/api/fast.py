@@ -21,6 +21,7 @@ class AnswerScoreRequest(BaseModel):
     sentence2: str
 
 app = FastAPI()
+# Initialize null states which will be loaded dynamically when methods are called for the first time
 app.state.generate_model = None
 app.state.generate_tokenizer = None
 app.state.question_answerer = None
@@ -91,6 +92,25 @@ async def generate_answers_api(request: AnswerGenerateRequest):
 
 @app.post("/generate-questions-and-answers")
 async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
+    """ Generate questions and answers
+
+    Generate questions and return validated questions and answers, based on confidence / answerability
+
+    JSON Fields:
+    ------------
+    `context` (str): The provided context from which questions and answers should be generated.
+
+    `allow_duplicates` (bool, optional): Whether questions with duplicate answers should be returned (default: False)
+
+    Returns:
+    ------------
+
+    `confidence_score` (list): confidence scores for questions generated
+
+    `questions` (list): questions generated and validated
+
+    `answers` (list): most likely answers found by answering model
+    """
 
     start = time.time()
 
@@ -114,23 +134,34 @@ async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
     # Add another question per 150 words of context
     n_questions = 4 + context_length // 150
 
+    # If context is longer than 450 words, split into overlapping chunks
     if context_length > 450:
         n_chunks = n_questions
         # The width of each chunk should be n_chunks - 2 (to allow overlapping)
+        # (use max() to prevent divide by zero in case of earlier error)
         width_factor = max(n_chunks - 2, 2)
 
+        # Create n overlapping chunks of size context_length // width_factor
+        #
+        # First, the context becomes a list through .split()
+        # Then the entire list is split into chunks.
+        # Where the chunks are not equal, blank strings are filled.
+        # This leaves a 2D list of strings. Each chunk is reassembled from list to string via " ".join()
         chunks = [' '.join(window) for window in mit.windowed(request.context.split(), n=context_length//width_factor, step=context_length//n_chunks, fillvalue="")]
 
+        # For each chunk, generate questions to be passed to the answer generation model
         for chunk in chunks:
             chunk_questions = generate_questions(model, tokenizer, chunk, 4)
             questions_lists.append(chunk_questions)
 
+    # If context is less than 450 words (~512 tokens), pass whole context to question generation
     else:
         questions_lists.append(generate_questions(model, tokenizer, request.context, n_questions*4))
 
     check1 = time.time()
     print(f"Question generation time: {check1 - start}")
 
+    # Create a flattened question list
     questions = []
     for l in questions_lists:
         for q in l:
@@ -142,6 +173,7 @@ async def generate_questions_and_answers_api(request: QuestionGenerateRequest):
     if request.allow_duplicates:
         max_repeat_exact_answers=2
 
+    # Pass questions and context to answer generator, filtering low conficence questions/answers
     response = select_top_n_questions(app.state.question_answerer,
                                     request.context,
                                     questions,
@@ -167,9 +199,9 @@ async def generate_scores_api(request: AnswerScoreRequest):
 
     JSON Fields:
     ------------
-    `sentence1` (list): The golden answer for a question.
+    `sentence1` (str): The golden answer for a question.
 
-    `sentence2` (list): The user answer that needs to be evaluted
+    `sentence2` (str): The user answer that needs to be evaluted
 
     Returns:
     ____________
